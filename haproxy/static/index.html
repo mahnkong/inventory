@@ -268,7 +268,6 @@
             box-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
         }
     </style>
-    <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
 </head>
 <body>
 <header class="app-header">
@@ -323,6 +322,8 @@
     let token = null;
     let config = null;
     let current_accordion = null;
+    let scanning = false;
+    let stream = null;
 
     const DB_NAME = "inventoryAppDB";
     const STORE_NAME = "storage";
@@ -376,20 +377,21 @@
         return result;
     }
 
-    // Liste unterstützter Barcode-Typen:
-    const itemScanFormats = [
-        ZXing.BarcodeFormat.EAN_13,
-        ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.ITF,
-        ZXing.BarcodeFormat.UPC_A,
-        ZXing.BarcodeFormat.UPC_E
-    ];
+    const formats = [
+        'code_128',
+        'code_39',
+        'code_93',
+        'codabar',
+        'ean_13',
+        'ean_8',
+        'upc_a',
+        'upc_e',
+        'itf'
+    ]
 
-    const itemScanHints = new Map();
-    itemScanHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, itemScanFormats);
-    const itemReader = new ZXing.BrowserMultiFormatReader(itemScanHints);
+    const itemReader =  ("BarcodeDetector" in globalThis) ? new BarcodeDetector({
+        formats: formats,
+    }) : null;
 
     async function addItem(storage_id, barcode) {
         overlay.classList.add("active");
@@ -492,28 +494,71 @@
     }
 
     async function scanItem(storage_id, isAdd = true) {
+        if (itemReader === null) {
+            showToast("'BarcodeDetector' not supported in this browser!")
+            return;
+        }
+        videoElem.style.display = 'inline-block';
+        abortDiv.style.display = 'block';
         try {
-            const devices = await itemReader.listVideoInputDevices();
-            const backCam =
-                devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
-            await itemReader.decodeFromVideoDevice(backCam.deviceId, video, (res, err) => {
-                if (res) {
-                    if (isAdd) {
-                        addItem(storage_id, res.getText());
-                    } else {
-                        removeItem(storage_id, res.getText());
-                    }
-                    resetScanElements();
-                }
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {facingMode: {ideal: 'environment'}},
+                audio: false,
             });
+
+            videoElem.srcObject = stream;
+            await videoElem.play();
+            scanning = true;
+            let code = await scan();
+            stopScanner();
+            if (code) {
+                if (isAdd) {
+                    addItem(storage_id, code);
+                } else {
+                    removeItem(storage_id, code);
+                }
+            }
         } catch (e) {
             showToast('Fehler beim Scannen: ' + e.message);
         }
     }
 
+    async function scan() {
+        return new Promise((resolve) => {
+            async function loop() {
+                if (!scanning) {
+                    resolve(null);
+                    return;
+                }
+                try {
+                    const barcodes = await itemReader.detect(videoElem);
+                    if (barcodes.length > 0) {
+                        // gefunden → Promise auflösen
+                        resolve(barcodes[0]['rawValue']);
+                        return;
+                    }
+                } catch (err) {
+                    showToast('Fehler beim Scannen: ' + err.message);
+                }
+                requestAnimationFrame(loop);
+            }
+            loop();
+        });
+    }
+
+    function stopScanner() {
+        scanning = false;
+        if (stream) {
+            const tracks = stream.getTracks();
+            tracks.forEach(t => t.stop());
+        }
+        videoElem.style.display = 'none';
+        abortDiv.style.display = 'none';
+    }
+
     function accordionToggle(bodyId) {
         if (current_accordion !== bodyId) {
-            resetScanElements();
+            stopScanner()
         }
         document.querySelectorAll('.accordion-body').forEach(b => {
             if (b.id !== bodyId) b.style.maxHeight = null;
@@ -548,9 +593,6 @@
             bodyHeadLeft.className = 'accordion-body-head-left';
             bodyHeadLeft.textContent = "➕";
             bodyHeadLeft.addEventListener('click', () => {
-                videoElem.style.display = 'inline-block';
-                abortDiv.style.display = 'block';
-                itemReader.reset();
                 scanItem(storage_id);
             })
 
@@ -558,9 +600,6 @@
             bodyHeadRight.className = 'accordion-body-head-right';
             bodyHeadRight.textContent = "➖";
             bodyHeadRight.addEventListener('click', () => {
-                videoElem.style.display = 'inline-block';
-                abortDiv.style.display = 'block';
-                itemReader.reset();
                 scanItem(storage_id, false);
             })
 
@@ -642,7 +681,7 @@
 
     document.addEventListener("DOMContentLoaded", onLoad);
     abortDiv.addEventListener('click', () => {
-        resetScanElements();
+        stopScanner();
     })
 
     if ("serviceWorker" in navigator) {

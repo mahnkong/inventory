@@ -5,8 +5,6 @@ const PRECACHED_ASSETS = [
     "/inventory/index.html",
     "/inventory/manifest.json",
     "/inventory/assets/icon-192.png",
-    "https://unpkg.com/@zxing/library@0.20.0",
-    "https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js",
 ];
 
 // --- Install ---
