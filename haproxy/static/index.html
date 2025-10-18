@@ -83,8 +83,11 @@
         .accordion-body {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
             background: #fafafa;
+        }
+
+        .accordion-body-animated {
+            transition: max-height 0.3s ease;
         }
 
         .item {
@@ -144,6 +147,21 @@
             margin: 0;
             font-size: 1.5rem;
         }
+
+        /* Settings Icon */
+        .search-btn {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            border-radius: 50%;
+            padding: 4px;
+        }
+
 
         /* Settings Icon */
         .settings-btn {
@@ -255,7 +273,7 @@
         }
 
         input {
-            padding: 8px 10px;
+            padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 1rem;
@@ -267,11 +285,22 @@
             border-color: #007bff;
             box-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
         }
+
+        .search-container {
+            margin: 1rem;
+        }
+
+        .search-input {
+            width: 80%;
+        }
     </style>
 </head>
 <body>
 <header class="app-header">
     <h1 class="title">Inventar</h1>
+    <button class="search-btn" id="searchBtn" aria-label="Suchen">
+        🔎
+    </button>
     <button class="settings-btn" id="settingsBtn" aria-label="Einstellungen">
         ⚙️
     </button>
@@ -301,29 +330,34 @@
     </div>
 </div>
 <div id="toast" class="toast"></div>
+<div id="search-container" class="search-container" style="display: none">
+    <input class="search-input" type="text" id="search" placeholder="Suche..."/>
+</div>
 <video style="display: none" id="video" autoplay playsinline></video>
 <div class="abort" style="display: none;" id="abort">Scan abbrechen</div>
-<div id="items"></div>
 <div id="accordion-container"></div>
 
 <script type="module">
     const videoElem = document.getElementById('video');
     const abortDiv = document.getElementById('abort');
-    const container = document.getElementById('accordion-container');
+    const accordionContainer = document.getElementById('accordion-container');
+    const searchContainer = document.getElementById('search-container');
     const settingsBtn = document.getElementById("settingsBtn");
+    const searchBtn = document.getElementById("searchBtn");
     const tokenField = document.getElementById("token");
     const modal = document.getElementById("settingsModal");
     const productNameModal = document.getElementById("productNameModal");
     const closeBtn = document.getElementById("closeSettings");
     const saveProductNameBtn = document.getElementById("saveProduct");
+    const searchInput = document.getElementById('search');
     const overlay = document.getElementById("appOverlay");
-
 
     let token = null;
     let config = null;
     let current_accordion = null;
     let scanning = false;
     let stream = null;
+    let debounceTimer;
 
     const DB_NAME = "inventoryAppDB";
     const STORE_NAME = "storage";
@@ -332,9 +366,23 @@
         tokenField.value = token;
         modal.classList.add("active")
     });
+
+    searchBtn.addEventListener("click", () => {
+        if (searchContainer.style.display === 'none') {
+            searchContainer.style.display = 'block';
+            searchBtn.textContent = '✖️';
+            searchInput.focus();
+        } else {
+            searchContainer.style.display = 'none';
+            searchBtn.textContent = '🔎';
+            searchInput.value = "";
+            filter("");
+        }
+    });
+
     closeBtn.addEventListener("click", () => {
         token = tokenField.value;
-        save('token', token).then(() => {
+        saveToIndexedDB('token', token).then(() => {
             location.reload();
         })
     });
@@ -356,7 +404,7 @@
         });
     }
 
-    export async function save(key, value) {
+    export async function saveToIndexedDB(key, value) {
         const db = await openDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
         tx.objectStore(STORE_NAME).put(value, key);
@@ -364,7 +412,7 @@
         db.close();
     }
 
-    export async function load(key) {
+    export async function loadFromIndexedDB(key) {
         const db = await openDB();
         const tx = db.transaction(STORE_NAME, "readonly");
         const store = tx.objectStore(STORE_NAME);
@@ -389,7 +437,7 @@
         'itf'
     ]
 
-    const itemReader =  ("BarcodeDetector" in globalThis) ? new BarcodeDetector({
+    const itemReader = ("BarcodeDetector" in globalThis) ? new BarcodeDetector({
         formats: formats,
     }) : null;
 
@@ -433,7 +481,7 @@
                 showToast(`API Fehler (status: ${response.status}) - nutze Cache`);
             } else {
                 let data = await response.json();
-                await save(cacheKey, data);
+                await saveToIndexedDB(cacheKey, data);
                 return data;
             }
         } catch (err) {
@@ -442,7 +490,7 @@
         }
 
         if (loadFromCache) {
-            const cached = await load(cacheKey);
+            const cached = await loadFromCache(cacheKey);
             if (cached) {
                 return cached;
             } else {
@@ -498,6 +546,7 @@
             showToast("'BarcodeDetector' not supported in this browser!")
             return;
         }
+        stopStreamTracks();
         videoElem.style.display = 'inline-block';
         abortDiv.style.display = 'block';
         try {
@@ -513,9 +562,9 @@
             stopScanner();
             if (code) {
                 if (isAdd) {
-                    addItem(storage_id, code);
+                    await addItem(storage_id, code);
                 } else {
-                    removeItem(storage_id, code);
+                    await removeItem(storage_id, code);
                 }
             }
         } catch (e) {
@@ -542,16 +591,21 @@
                 }
                 requestAnimationFrame(loop);
             }
+
             loop();
         });
     }
 
-    function stopScanner() {
-        scanning = false;
+    function stopStreamTracks() {
         if (stream) {
             const tracks = stream.getTracks();
             tracks.forEach(t => t.stop());
         }
+    }
+
+    function stopScanner() {
+        scanning = false;
+        stopStreamTracks();
         videoElem.style.display = 'none';
         abortDiv.style.display = 'none';
     }
@@ -567,8 +621,14 @@
         body.style.maxHeight = body.style.maxHeight ? null : body.scrollHeight + 'px';
     }
 
-    function renderList(data) {
-        container.innerHTML = '';
+    function accordionToggleAll() {
+        document.querySelectorAll('.accordion-body').forEach(b => {
+            b.style.maxHeight = b.style.maxHeight ? null : b.scrollHeight + 'px';
+        });
+    }
+
+    function renderList(data, toggleAll = false) {
+        accordionContainer.innerHTML = '';
         for (let index in config) {
             const storage_id = config[index]['id'];
             const acc = document.createElement('div');
@@ -577,36 +637,36 @@
             const header = document.createElement('div');
             header.className = 'clickable-element';
             header.textContent = config[index]['name'];
-            header.addEventListener('click', () => {
-                accordionToggle(body.id)
-                current_accordion = body.id;
-            });
+            if (! toggleAll) {
+                header.addEventListener('click', () => {
+                    accordionToggle(body.id)
+                    current_accordion = body.id === current_accordion ? null : body.id;
+                });
+            }
 
             const body = document.createElement('div');
-            body.className = 'accordion-body';
+            body.className = 'accordion-body' + (toggleAll ? '' : ' accordion-body-animated');
             body.id = `body${storage_id}`;
 
-            const bodyHead = document.createElement('div');
-            bodyHead.className = 'accordion-body-head';
-
-            const bodyHeadLeft = document.createElement('div');
-            bodyHeadLeft.className = 'accordion-body-head-left';
-            bodyHeadLeft.textContent = "➕";
-            bodyHeadLeft.addEventListener('click', () => {
-                scanItem(storage_id);
-            })
-
-            const bodyHeadRight = document.createElement('div');
-            bodyHeadRight.className = 'accordion-body-head-right';
-            bodyHeadRight.textContent = "➖";
-            bodyHeadRight.addEventListener('click', () => {
-                scanItem(storage_id, false);
-            })
-
-
-            bodyHead.appendChild(bodyHeadLeft);
-            bodyHead.appendChild(bodyHeadRight);
-            body.appendChild(bodyHead);
+            if (! toggleAll) {
+                const bodyHead = document.createElement('div');
+                bodyHead.className = 'accordion-body-head';
+                const bodyHeadLeft = document.createElement('div');
+                bodyHeadLeft.className = 'accordion-body-head-left';
+                bodyHeadLeft.textContent = "➕";
+                bodyHeadLeft.addEventListener('click', () => {
+                    scanItem(storage_id);
+                })
+                const bodyHeadRight = document.createElement('div');
+                bodyHeadRight.className = 'accordion-body-head-right';
+                bodyHeadRight.textContent = "➖";
+                bodyHeadRight.addEventListener('click', () => {
+                    scanItem(storage_id, false);
+                })
+                bodyHead.appendChild(bodyHeadLeft);
+                bodyHead.appendChild(bodyHeadRight);
+                body.appendChild(bodyHead);
+            }
 
             if (storage_id in data) {
                 Object.entries(data[storage_id]).sort(([, a], [, b]) => a['name'].localeCompare(b['name'])).forEach(([barcode, itemData]) => {
@@ -648,17 +708,13 @@
 
             acc.appendChild(header);
             acc.appendChild(body);
-            container.appendChild(acc);
+            accordionContainer.appendChild(acc);
         }
-        if (current_accordion != null) {
+        if (toggleAll) {
+            accordionToggleAll();
+        } else if (current_accordion != null) {
             accordionToggle(current_accordion);
         }
-    }
-
-    function resetScanElements() {
-        itemReader.reset();
-        videoElem.style.display = 'none';
-        abortDiv.style.display = 'none';
     }
 
     function showToast(message) {
@@ -671,7 +727,7 @@
     }
 
     async function onLoad() {
-        token = await load('token');
+        token = await loadFromIndexedDB('token');
         if (token === null || token === undefined || token === '') {
             showToast('Kein Token gefunden - Bitte konfigurieren!');
         } else {
@@ -679,10 +735,43 @@
         }
     }
 
+    async function filter(query) {
+        const q = query.toLowerCase();
+        const data = await loadFromIndexedDB('cache_items');
+        let toggleAll = false;
+        if (q.length > 0) {
+            for (let index in config) {
+                const storage_id = config[index]['id'];
+                if (storage_id in data) {
+                    Object.entries(data[storage_id]).forEach(([barcode, itemData]) => {
+                        if (!itemData['name'].toLowerCase().match(q)) {
+                            delete data[storage_id][barcode];
+                        }
+                    });
+                }
+            }
+            toggleAll = true;
+        }
+        renderList(data, toggleAll);
+    }
+
     document.addEventListener("DOMContentLoaded", onLoad);
     abortDiv.addEventListener('click', () => {
         stopScanner();
     })
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const query = searchInput.value;
+
+        if (!query) {
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            await filter(query);
+        }, 200);
+    });
 
     if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/inventory/service-worker.js");
