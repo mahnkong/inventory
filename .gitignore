@@ -1,0 +1,7 @@
+*.un~
+*.swp
+haproxy/certs
+.idea
+inventory-data/
+inventory.yml
+.env

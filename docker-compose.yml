@@ -1,0 +1,24 @@
+services:
+  sinatra:
+    image: mahnkong/inventory
+    build:
+      context: backend
+    container_name: sinatra
+    restart: unless-stopped
+    volumes:
+      - ./inventory-data:/inventory-data
+      - ./inventory.yml:/inventory/inventory.yml
+    environment:
+      - INVENTORY_API_KEY=${INVENTORY_API_KEY}
+      - INVENTORY_DATA_DIR=/inventory-data
+      - INVENTORY_CONFIG_FILE=/inventory/inventory.yml
+  reverse-proxy:
+    image: haproxytech/haproxy-alpine:3.0.3
+    environment:
+      - HTTPS_PORT=10443
+    volumes:
+      - ./haproxy/certs:/usr/local/etc/haproxy/certs
+      - ./haproxy/static:/usr/local/etc/haproxy/static
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    ports:
+      - "10443:443"

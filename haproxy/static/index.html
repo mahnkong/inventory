@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Inventar</title>
+    <link rel="manifest" href="/inventory/manifest.json">
+    <meta name="theme-color" content="#0078d7">
+    <link rel="icon" href="/inventory/assets/icon-192.png" type="image/png">
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        video {
+            width: 100%;
+            max-width: 480px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            margin-top: 1rem;
+        }
+
+        .key {
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .accordion {
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .clickable-element {
+            padding: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: #e0e0e0;
+        }
+
+        .clickable-element:hover {
+            background: #d5d5d5;
+        }
+
+        .accordion-body-head {
+            display: flex;
+            justify-content: space-between; /* linkes & rechtes Div aufteilen */
+            align-items: stretch;
+        }
+
+        .accordion-body-head-left {
+            padding: 1rem;
+            font-weight: bold;
+            background: #dfe4ea;
+            border: 1px solid #cfd7de;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .accordion-body-head-left:hover {
+            background: #cfd7de;
+        }
+
+        .accordion-body-head-right {
+            padding: 1rem;
+            font-weight: bold;
+            background: #ece2e4;
+            border: 1px solid #dfd1d4;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .accordion-body-head-right:hover {
+            background: #dfd1d4;
+        }
+
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: #fafafa;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between; /* linkes & rechtes Div aufteilen */
+            align-items: stretch;
+        }
+
+        .item-text {
+            padding: 1rem;
+            font-weight: bold;
+            text-align: left;
+            background: #e8e4da;
+            border: 1px solid #dbd5c5;
+            user-select: none; /* moderne Browser */
+            -webkit-user-select: none; /* Safari / iOS */
+            -ms-user-select: none; /* alter Edge */
+            flex: 1; /* füllt den Platz auf der linken Seite */
+        }
+
+        .item-action {
+            padding: 1rem;
+            font-weight: bold;
+            text-align: left;
+            background: #ece2e4;
+            border: 1px solid #dfd1d4;
+            user-select: none; /* moderne Browser */
+            -webkit-user-select: none; /* Safari / iOS */
+            -ms-user-select: none; /* alter Edge */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .item-action:hover {
+            background: #dfd1d4;
+        }
+
+        .abort {
+            padding: 1rem;
+            font-weight: bold;
+            background: #ece2e4;
+            user-select: none; /* moderne Browser */
+            -webkit-user-select: none; /* Safari / iOS */
+            -ms-user-select: none; /* alter Edge */
+        }
+
+        /* Header */
+        .app-header {
+            position: relative;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 12px 16px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        /* Settings Icon */
+        .settings-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            border-radius: 50%;
+            padding: 4px;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .settings-btn:hover {
+            background: #e0e0e0;
+            transform: translateY(-50%) rotate(20deg);
+        }
+
+        .toast {
+            visibility: hidden;
+            max-width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px 20px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 20px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.4s, top 0.4s;
+        }
+
+        /* Sichtbarer Zustand */
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            top: 40px; /* animiertes Einblenden leicht nach unten */
+        }
+
+        /* Modal */
+        .settings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 250px;
+        }
+
+        /* App Overlay – unsichtbar im Normalzustand */
+        .app-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* über allem */
+        }
+
+        /* Aktiv-Zustand */
+        .app-overlay.active {
+            display: flex;
+        }
+
+        /* Optional: Loader-Animation */
+        .loader {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 12px;
+        }
+
+        label {
+            font-weight: 500;
+            margin-bottom: 4px;
+            text-align: left;
+        }
+
+        input {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
+        }
+    </style>
+    <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
+</head>
+<body>
+<header class="app-header">
+    <h1 class="title">Inventar</h1>
+    <button class="settings-btn" id="settingsBtn" aria-label="Einstellungen">
+        ⚙️
+    </button>
+</header>
+<!-- Overlay -->
+<div class="app-overlay" id="appOverlay">
+    <div class="loader">⏳</div>
+</div>
+<!-- SETTINGS MODAL -->
+<div class="settings-modal" id="settingsModal">
+    <div class="modal-content">
+        <h2>Einstellungen</h2>
+        <div class="form-group">
+            <input type="text" id="token" name="token" placeholder="AUTH_TOKEN">
+        </div>
+        <div class="clickable-element" id="closeSettings">Speichern</div>
+    </div>
+</div>
+<!-- PRODUCT LABEL MODAL -->
+<div class="settings-modal" id="productNameModal">
+    <div class="modal-content">
+        <h2>Produktname</h2>
+        <div class="form-group">
+            <input type="text" id="productName" name="productName" placeholder="PRODUCT_NAME">
+        </div>
+        <div class="clickable-element" id="saveProduct">Speichern</div>
+    </div>
+</div>
+<div id="toast" class="toast"></div>
+<video style="display: none" id="video" autoplay playsinline></video>
+<div class="abort" style="display: none;" id="abort">Scan abbrechen</div>
+<div id="items"></div>
+<div id="accordion-container"></div>
+
+<script type="module">
+    const videoElem = document.getElementById('video');
+    const abortDiv = document.getElementById('abort');
+    const container = document.getElementById('accordion-container');
+    const settingsBtn = document.getElementById("settingsBtn");
+    const tokenField = document.getElementById("token");
+    const modal = document.getElementById("settingsModal");
+    const productNameModal = document.getElementById("productNameModal");
+    const closeBtn = document.getElementById("closeSettings");
+    const saveProductNameBtn = document.getElementById("saveProduct");
+    const overlay = document.getElementById("appOverlay");
+
+
+    let token = null;
+    let config = null;
+    let current_accordion = null;
+
+    const DB_NAME = "inventoryAppDB";
+    const STORE_NAME = "storage";
+
+    settingsBtn.addEventListener("click", () => {
+        tokenField.value = token;
+        modal.classList.add("active")
+    });
+    closeBtn.addEventListener("click", () => {
+        token = tokenField.value;
+        save('token', token).then(() => {
+            location.reload();
+        })
+    });
+    saveProductNameBtn.addEventListener("click", () => {
+        location.reload();
+    });
+
+    async function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    export async function save(key, value) {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(value, key);
+        await tx.complete; // optional in modernen Browsern
+        db.close();
+    }
+
+    export async function load(key) {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const result = await new Promise((resolve, reject) => {
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = (e) => reject(e);
+        });
+        db.close();
+        return result;
+    }
+
+    // Liste unterstützter Barcode-Typen:
+    const itemScanFormats = [
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.ITF,
+        ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E
+    ];
+
+    const itemScanHints = new Map();
+    itemScanHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, itemScanFormats);
+    const itemReader = new ZXing.BrowserMultiFormatReader(itemScanHints);
+
+    async function addItem(storage_id, barcode) {
+        overlay.classList.add("active");
+        const data = new URLSearchParams();
+        data.append("storage_id", storage_id);
+        data.append("barcode", barcode);
+        const response = await fetch("/backend/items", {
+            method: "POST",
+            headers: {
+                "X-Auth-Token": token,
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: data
+        });
+        if (!response.ok) {
+            showToast('Fehler beim Speichern des Items: ' + response.status + ' ' + response.statusText);
+        } else {
+            let productName = await response.json();
+            showToast(`${productName} hinzugefügt`);
+            await loadItems();
+        }
+        overlay.classList.remove("active");
+    }
+
+    async function loadUrl(type, url) {
+        const cacheKey = `cache_${type}`;
+        let loadFromCache = false;
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    "X-Auth-Token": token,
+                    'Accept': 'application/json'
+                }
+            })
+            if (!response.ok) {
+                loadFromCache = true;
+                showToast(`API Fehler (status: ${response.status}) - nutze Cache`);
+            } else {
+                let data = await response.json();
+                await save(cacheKey, data);
+                return data;
+            }
+        } catch (err) {
+            loadFromCache = true;
+            showToast(`Netzwerk Fehler / Offline - nutze Cache`);
+        }
+
+        if (loadFromCache) {
+            const cached = await load(cacheKey);
+            if (cached) {
+                return cached;
+            } else {
+                showToast(`No cached data for type: ${type}`);
+                return null;
+            }
+        }
+    }
+
+    async function loadConfig() {
+        overlay.classList.add("active");
+        config = await loadUrl('config', '/backend/config');
+        overlay.classList.remove("active");
+    }
+
+    async function loadItems() {
+        overlay.classList.add("active");
+        let items = await loadUrl('items', '/backend/items');
+        overlay.classList.remove("active");
+        renderList(items);
+    }
+
+    async function removeItem(storage_id, barcode) {
+        overlay.classList.add("active");
+        const data = new URLSearchParams();
+        data.append("storage_id", storage_id);
+        data.append("barcode", barcode);
+
+        try {
+            const response = await fetch('/backend/items', {
+                method: "DELETE",
+                headers: {
+                    "X-Auth-Token": token,
+                    'Accept': 'application/json'
+                },
+                body: data
+            });
+            if (!response.ok) {
+                showToast('Fehler beim Löschen: ' + response.status + ' ' + response.statusText);
+            } else {
+                let productName = await response.json();
+                showToast(`${productName} entfernt`);
+                await loadItems();
+            }
+        } catch (err) {
+            showToast(`Netzwerk Fehler / Offline`);
+        }
+        overlay.classList.remove("active");
+    }
+
+    async function scanItem(storage_id, isAdd = true) {
+        try {
+            const devices = await itemReader.listVideoInputDevices();
+            const backCam =
+                devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+            await itemReader.decodeFromVideoDevice(backCam.deviceId, video, (res, err) => {
+                if (res) {
+                    if (isAdd) {
+                        addItem(storage_id, res.getText());
+                    } else {
+                        removeItem(storage_id, res.getText());
+                    }
+                    resetScanElements();
+                }
+            });
+        } catch (e) {
+            showToast('Fehler beim Scannen: ' + e.message);
+        }
+    }
+
+    function accordionToggle(bodyId) {
+        if (current_accordion !== bodyId) {
+            resetScanElements();
+        }
+        document.querySelectorAll('.accordion-body').forEach(b => {
+            if (b.id !== bodyId) b.style.maxHeight = null;
+        });
+        let body = document.getElementById(bodyId);
+        body.style.maxHeight = body.style.maxHeight ? null : body.scrollHeight + 'px';
+    }
+
+    function renderList(data) {
+        container.innerHTML = '';
+        for (let index in config) {
+            const storage_id = config[index]['id'];
+            const acc = document.createElement('div');
+            acc.className = 'accordion';
+
+            const header = document.createElement('div');
+            header.className = 'clickable-element';
+            header.textContent = config[index]['name'];
+            header.addEventListener('click', () => {
+                accordionToggle(body.id)
+                current_accordion = body.id;
+            });
+
+            const body = document.createElement('div');
+            body.className = 'accordion-body';
+            body.id = `body${storage_id}`;
+
+            const bodyHead = document.createElement('div');
+            bodyHead.className = 'accordion-body-head';
+
+            const bodyHeadLeft = document.createElement('div');
+            bodyHeadLeft.className = 'accordion-body-head-left';
+            bodyHeadLeft.textContent = "➕";
+            bodyHeadLeft.addEventListener('click', () => {
+                videoElem.style.display = 'inline-block';
+                abortDiv.style.display = 'block';
+                itemReader.reset();
+                scanItem(storage_id);
+            })
+
+            const bodyHeadRight = document.createElement('div');
+            bodyHeadRight.className = 'accordion-body-head-right';
+            bodyHeadRight.textContent = "➖";
+            bodyHeadRight.addEventListener('click', () => {
+                videoElem.style.display = 'inline-block';
+                abortDiv.style.display = 'block';
+                itemReader.reset();
+                scanItem(storage_id, false);
+            })
+
+
+            bodyHead.appendChild(bodyHeadLeft);
+            bodyHead.appendChild(bodyHeadRight);
+            body.appendChild(bodyHead);
+
+            if (storage_id in data) {
+                Object.entries(data[storage_id]).sort(([, a], [, b]) => a['name'].localeCompare(b['name'])).forEach(([barcode, itemData]) => {
+                    const item = document.createElement('div');
+                    item.className = 'item';
+
+                    const itemText = document.createElement('div');
+                    itemText.className = 'item-text';
+                    itemText.textContent = `${itemData['name']} ×️ ${itemData['amount']}`;
+
+                    let productNameTimer;
+                    itemText.addEventListener("pointerdown", e => {
+                        productNameTimer = setTimeout(() => {
+                            productNameModal.classList.add("active")
+                        }, 600);
+                    });
+                    itemText.addEventListener("pointerup", () => clearTimeout(productNameTimer));
+                    itemText.addEventListener("pointercancel", () => clearTimeout(productNameTimer));
+
+                    const itemAction = document.createElement('div');
+                    itemAction.className = 'item-action';
+                    itemAction.textContent = '➖';
+
+                    let actionTimer;
+                    itemAction.addEventListener("pointerdown", e => {
+                        actionTimer = setTimeout(() => {
+                            removeItem(storage_id, barcode);
+                        }, 600);
+                    });
+                    itemAction.addEventListener("pointerup", () => clearTimeout(actionTimer));
+                    itemAction.addEventListener("pointercancel", () => clearTimeout(actionTimer));
+
+                    item.appendChild(itemText);
+                    item.appendChild(itemAction);
+
+                    body.appendChild(item);
+                });
+            }
+
+            acc.appendChild(header);
+            acc.appendChild(body);
+            container.appendChild(acc);
+        }
+        if (current_accordion != null) {
+            accordionToggle(current_accordion);
+        }
+    }
+
+    function resetScanElements() {
+        itemReader.reset();
+        videoElem.style.display = 'none';
+        abortDiv.style.display = 'none';
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = "toast show";
+        setTimeout(() => {
+            toast.className = toast.className.replace("show", "");
+        }, 1500);
+    }
+
+    async function onLoad() {
+        token = await load('token');
+        if (token === null || token === undefined || token === '') {
+            showToast('Kein Token gefunden - Bitte konfigurieren!');
+        } else {
+            loadConfig().then(loadItems);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", onLoad);
+    abortDiv.addEventListener('click', () => {
+        resetScanElements();
+    })
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/inventory/service-worker.js");
+    }
+</script>
+</body>
+</html>
