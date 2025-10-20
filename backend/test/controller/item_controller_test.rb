@@ -9,6 +9,7 @@ module Inventory
       def test_add_item_with_barcode
 
         data = {}
+        barcode_cache = {}
 
         mock_storage = mock('storage')
         mock_storage.expects(:load_data).returns(data)
@@ -18,32 +19,52 @@ module Inventory
           .stubs(:new)
           .returns(mock_storage)
 
+        mock_barcode_cache = mock('barcode_cache')
+        mock_barcode_cache.expects(:load_data).returns(barcode_cache)
+        mock_barcode_cache.expects(:store_data).returns(true)
+
+        Inventory::Storage::BarcodeCacheStorage
+          .stubs(:new)
+          .returns(mock_barcode_cache)
+
         item_controller = ItemController.new
-        assert_same(false, data.key?('Bifi roll'))
-        item_controller.add_item_with_barcode(4251097410289)
-        assert_same(1, data['Bifi roll'])
+        assert_same(false, data.key?('1'))
+        item_controller.add_item_with_barcode("1", "4251097410289")
+        assert_same(1, data["1"]["4251097410289"])
       end
 
-      def test_remove_item_with_name
+      def test_remove_item_with_barcode
 
+        barcode_cache = {
+          "4251097410289" => 'Bifi roll'
+        }
         data = {
-          'Bifi roll' => 2,
+          '1' => {
+            "4251097410289" => 2
+          }
         }
 
         mock_storage = mock('storage')
-        mock_storage.expects(:load_data).returns(data).times(2)
-        mock_storage.expects(:store_data).returns(true).times(2)
+        mock_storage.expects(:load_data).returns(data).twice
+        mock_storage.expects(:store_data).returns(true).twice
 
         Inventory::Storage::DataStorage
           .stubs(:new)
           .returns(mock_storage)
 
+        mock_barcode_cache = mock('barcode_cache')
+        mock_barcode_cache.expects(:load_data).returns(barcode_cache).twice
+
+        Inventory::Storage::BarcodeCacheStorage
+          .stubs(:new)
+          .returns(mock_barcode_cache)
+
         item_controller = ItemController.new
-        assert_same(2, data['Bifi roll'])
-        item_controller.remove_item_with_name('Bifi roll')
-        assert_same(1, data['Bifi roll'])
-        item_controller.remove_item_with_name('Bifi roll')
-        assert_same(false, data.key?('Bifi roll'))
+        assert_same(2, data['1']['4251097410289'])
+        item_controller.remove_item_with_barcode('1', '4251097410289')
+        assert_same(1, data['1']['4251097410289'])
+        item_controller.remove_item_with_barcode('1', '4251097410289')
+        assert_same(false, data.key?(data['1']['4251097410289']))
       end
     end
   end
