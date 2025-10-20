@@ -1,6 +1,7 @@
 services:
   sinatra:
     image: ghcr.io/mahnkong/inventory:latest
+    pull_policy: always
     container_name: sinatra
     build:
       context: backend
