@@ -48,9 +48,9 @@ module Inventory
         Openfoodfacts::Product.expects(:get).with(barcode).returns(product)
 
         item_controller = ItemController.new
-        assert_same(false, data.key?(storage_id))
+        assert_equal(false, data.key?(storage_id))
         item_controller.add_item_with_barcode(storage_id, barcode)
-        assert_same(1, data[storage_id][barcode])
+        assert_equal(1, data[storage_id][barcode])
       end
 
       def test_remove_item_with_barcode
@@ -76,11 +76,11 @@ module Inventory
         mock_barcode_cache.expects(:load_data).returns(barcode_cache).twice
 
         item_controller = ItemController.new
-        assert_same(2, data[storage_id][barcode])
-        assert_same(product, item_controller.remove_item_with_barcode(storage_id, barcode))
-        assert_same(1, data[storage_id][barcode])
-        assert_same(product, item_controller.remove_item_with_barcode(storage_id, barcode))
-        assert_same(false, data.key?(data[storage_id][barcode]))
+        assert_equal(2, data[storage_id][barcode])
+        assert_equal(product, item_controller.remove_item_with_barcode(storage_id, barcode))
+        assert_equal(1, data[storage_id][barcode])
+        assert_equal(product, item_controller.remove_item_with_barcode(storage_id, barcode))
+        assert_equal(false, data.key?(data[storage_id][barcode]))
       end
     end
   end
