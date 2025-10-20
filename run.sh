@@ -21,6 +21,10 @@ down="$1"
 if [ "$down" != "" ]; then
     docker compose down
 else
-    docker compose up -d --build --force-recreate || exit 1
-    docker compose logs -f
+    if [ "${DOCKER_COMPOSE_BUILD}x" != "x" ]; then
+      docker compose up -d --build --force-recreate || exit 1
+      docker compose logs -f
+    else
+      docker compose up -d --force-recreate || exit 1
+    fi
 fi

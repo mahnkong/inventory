@@ -5,7 +5,6 @@ module Inventory
     require 'test/unit'
     require 'mocha/test_unit'
 
-
     class ItemControllerTest < Test::Unit::TestCase
 
       def create_barcode_cache_mock
@@ -27,8 +26,13 @@ module Inventory
 
         mock_storage
       end
-      
+
       def test_add_item_with_barcode
+        barcode = "4251097410289"
+        storage_id = "1"
+        product = mock('product')
+        product.stubs(:brands).returns("Mocked")
+        product.stubs(:product_name).returns("Product")
 
         data = {}
         barcode_cache = {}
@@ -41,22 +45,28 @@ module Inventory
         mock_barcode_cache.expects(:load_data).returns(barcode_cache)
         mock_barcode_cache.expects(:store_data).returns(true)
 
+        Openfoodfacts::Product.expects(:get).with(barcode).returns(product)
+
         item_controller = ItemController.new
-        assert_same(false, data.key?('1'))
-        item_controller.add_item_with_barcode("1", "4251097410289")
-        assert_same(1, data["1"]["4251097410289"])
+        assert_same(false, data.key?(storage_id))
+        item_controller.add_item_with_barcode(storage_id, barcode)
+        assert_same(1, data[storage_id][barcode])
       end
 
       def test_remove_item_with_barcode
+        barcode = "4251097410289"
+        storage_id = "1"
+        product = "Mocked Product"
 
         barcode_cache = {
-          "4251097410289" => 'Bifi roll'
+          barcode => product
         }
         data = {
-          '1' => {
-            "4251097410289" => 2
+          storage_id => {
+            barcode => 2
           }
         }
+
 
         mock_storage = create_storage_mock
         mock_storage.expects(:load_data).returns(data).twice
@@ -66,11 +76,11 @@ module Inventory
         mock_barcode_cache.expects(:load_data).returns(barcode_cache).twice
 
         item_controller = ItemController.new
-        assert_same(2, data['1']['4251097410289'])
-        item_controller.remove_item_with_barcode('1', '4251097410289')
-        assert_same(1, data['1']['4251097410289'])
-        item_controller.remove_item_with_barcode('1', '4251097410289')
-        assert_same(false, data.key?(data['1']['4251097410289']))
+        assert_same(2, data[storage_id][barcode])
+        assert_same(product, item_controller.remove_item_with_barcode(storage_id, barcode))
+        assert_same(1, data[storage_id][barcode])
+        assert_same(product, item_controller.remove_item_with_barcode(storage_id, barcode))
+        assert_same(false, data.key?(data[storage_id][barcode]))
       end
     end
   end

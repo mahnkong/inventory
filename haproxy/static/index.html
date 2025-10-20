@@ -492,7 +492,7 @@
         }
 
         if (loadFromCache) {
-            const cached = await loadFromCache(cacheKey);
+            const cached = await loadFromIndexedDB(cacheKey);
             if (cached) {
                 return cached;
             } else {
