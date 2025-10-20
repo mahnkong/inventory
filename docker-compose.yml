@@ -2,6 +2,8 @@ services:
   sinatra:
     image: ghcr.io/mahnkong/inventory:latest
     container_name: sinatra
+    build:
+      context: backend
     restart: unless-stopped
     volumes:
       - ./inventory-data:/inventory-data
