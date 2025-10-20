@@ -373,11 +373,12 @@
             searchContainer.style.display = 'block';
             searchBtn.textContent = '✖️';
             searchInput.focus();
+            filter("");
         } else {
             searchContainer.style.display = 'none';
             searchBtn.textContent = '🔎';
             searchInput.value = "";
-            filter("");
+            filter();
         }
     });
 
@@ -558,6 +559,9 @@
 
             videoElem.srcObject = stream;
             await videoElem.play();
+            setTimeout(() => {
+                videoElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
             scanning = true;
             let code = await scan();
             stopScanner();
@@ -736,16 +740,16 @@
         }
     }
 
-    async function filter(query) {
-        const q = query.toLowerCase();
+    async function filter(query = null) {
         const data = await loadFromIndexedDB('cache_items');
         let toggleAll = false;
-        if (q.length > 0) {
+        if (query != null) {
+            const queryLower = query.toLowerCase();
             for (let index in config) {
                 const storage_id = config[index]['id'];
                 if (storage_id in data) {
                     Object.entries(data[storage_id]).forEach(([barcode, itemData]) => {
-                        if (!itemData['name'].toLowerCase().match(q)) {
+                        if (!itemData['name'].toLowerCase().match(queryLower)) {
                             delete data[storage_id][barcode];
                         }
                     });
