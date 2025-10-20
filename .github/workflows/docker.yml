@@ -25,4 +25,4 @@ jobs:
       with:
         context: backend
         push: true
-        tags: ghcr.io/${{ github.repository_owner }}/inventory/backend:latest
+        tags: ghcr.io/${{ github.repository_owner }}/inventory:latest
