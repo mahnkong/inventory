@@ -14,6 +14,4 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
-      - run: cd backend
-      - run: bundle install
-      - run: bundle exec rake test
+      - run: cd backend && bundle install && bundle exec rake test
