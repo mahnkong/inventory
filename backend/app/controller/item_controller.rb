@@ -31,7 +31,7 @@ module Inventory
               elsif product.generic_name
                 product_name << " '#{product.generic_name}'"
               end
-              @barcode_cache_storage.store_data(barcode_cache.merge({ barcode => product_name }))
+              modify_barcode_mapping(barcode, product_name)
             else
               return nil
             end
@@ -44,6 +44,12 @@ module Inventory
           Inventory::Util.logger.error "HTTP Error while fetching barcode info from api: #{e.message}"
           return nil
         end
+      end
+
+      def modify_barcode_mapping(barcode, product_name)
+        Inventory::Util.logger.info "Mapping barcode '#{barcode}' to product '#{product_name}'"
+        barcode_cache = @barcode_cache_storage.load_data
+        @barcode_cache_storage.store_data(barcode_cache.merge({ barcode => product_name }))
       end
 
       def remove_item_with_barcode(storage_id, barcode)

@@ -36,6 +36,18 @@ module Inventory
       end
     end
 
+    post '/backend/products' do
+      content_type :json
+      barcode = params[:barcode]
+      product_name = params[:product_name]
+      result = settings.item_controller.modify_barcode_mapping(barcode, product_name)
+      if result != nil
+        status 201
+      else
+        status 400
+      end
+    end
+
     post '/backend/items' do
       content_type :json
       storage_id = params[:storage_id]

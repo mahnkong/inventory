@@ -324,6 +324,7 @@
     <div class="modal-content">
         <h2>Produktname</h2>
         <div class="form-group">
+            <input type="hidden" id="productBarcode" name="productBarcide"/>
             <input type="text" id="productName" name="productName" placeholder="PRODUCT_NAME">
         </div>
         <div class="clickable-element" id="saveProduct">Speichern</div>
@@ -347,6 +348,8 @@
     const tokenField = document.getElementById("token");
     const modal = document.getElementById("settingsModal");
     const productNameModal = document.getElementById("productNameModal");
+    const productName = document.getElementById("productName");
+    const productBarcode = document.getElementById("productBarcode");
     const closeBtn = document.getElementById("closeSettings");
     const saveProductNameBtn = document.getElementById("saveProduct");
     const searchInput = document.getElementById('search');
@@ -368,19 +371,27 @@
     });
 
     searchBtn.addEventListener("click", () => {
-        current_accordion = null;
         if (searchContainer.style.display === 'none') {
-            searchContainer.style.display = 'block';
-            searchBtn.textContent = '✖️';
-            searchInput.focus();
-            filter("");
+            openSearch()
         } else {
-            searchContainer.style.display = 'none';
-            searchBtn.textContent = '🔎';
-            searchInput.value = "";
-            filter();
+            closeSearch()
         }
     });
+
+    function openSearch() {
+        current_accordion = null;
+        searchContainer.style.display = 'block';
+        searchBtn.textContent = '✖️';
+        searchInput.focus();
+        filter("");
+    }
+    function closeSearch() {
+        current_accordion = null;
+        searchContainer.style.display = 'none';
+        searchBtn.textContent = '🔎';
+        searchInput.value = "";
+        filter();
+    }
 
     closeBtn.addEventListener("click", () => {
         token = tokenField.value;
@@ -389,7 +400,8 @@
         })
     });
     saveProductNameBtn.addEventListener("click", () => {
-        location.reload();
+        modifyBarcodeMapping().then(closeSearch);
+        productNameModal.classList.remove("active");
     });
 
     async function openDB() {
@@ -548,6 +560,34 @@
         overlay.classList.remove("active");
     }
 
+    async function modifyBarcodeMapping() {
+        overlay.classList.add("active");
+        const data = new URLSearchParams();
+        data.append("barcode", productBarcode.value);
+        data.append("product_name", productName.value);
+
+        try {
+            const response = await fetch('/backend/products', {
+                method: "POST",
+                headers: {
+                    "X-Auth-Token": token,
+                    'Accept': 'application/json'
+                },
+                body: data
+            });
+            if (!response.ok) {
+                showToast('Fehler beim Ändern: ' + response.status + ' ' + response.statusText);
+            } else {
+                showToast(`Produkt umbenannt zu ${productName.value}`);
+                await loadItems();
+            }
+        } catch (err) {
+            showToast(`Netzwerk Fehler / Offline`);
+        }
+        overlay.classList.remove("active");
+    }
+
+
     async function scanItem(storage_id, isAdd = true) {
         if (itemReader === null) {
             showToast("'BarcodeDetector' not supported in this browser!")
@@ -637,6 +677,13 @@
         });
     }
 
+    function showProductNameModal(barcode, name) {
+        productBarcode.value = barcode;
+        productName.value = name;
+        productNameModal.classList.add("active");
+        productName.focus();
+    }
+
     function renderList(data, toggleAll = false) {
         accordionContainer.innerHTML = '';
         for (let index in config) {
@@ -690,7 +737,7 @@
                     let productNameTimer;
                     itemText.addEventListener("pointerdown", e => {
                         productNameTimer = setTimeout(() => {
-                            productNameModal.classList.add("active")
+                            showProductNameModal(barcode, itemData['name']);
                         }, 600);
                     });
                     itemText.addEventListener("pointerup", () => clearTimeout(productNameTimer));

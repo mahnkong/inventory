@@ -27,6 +27,43 @@ module Inventory
         mock_storage
       end
 
+      def test_modify_barcode_mapping_new_entry
+        barcode = "4251097410289"
+        new_product_name = "Testproduct"
+        barcode_cache = {}
+        mock_barcode_cache = create_barcode_cache_mock
+        mock_barcode_cache.expects(:load_data).returns(barcode_cache)
+        mock_barcode_cache.expects(:store_data).with do |data|
+          barcode_cache = data
+        end
+
+        item_controller = ItemController.new
+
+        item_controller.modify_barcode_mapping(barcode, new_product_name)
+        assert_equal(new_product_name, barcode_cache[barcode])
+      end
+
+
+      def test_modify_barcode_mapping_existing_entry
+        barcode = "4251097410289"
+        old_product_name = "Testproduct"
+        new_product_name = "Newproduct"
+        barcode_cache = {
+          barcode => old_product_name
+        }
+        mock_barcode_cache = create_barcode_cache_mock
+        mock_barcode_cache.expects(:load_data).returns(barcode_cache)
+        mock_barcode_cache.expects(:store_data).with do |data|
+          barcode_cache = data
+        end
+
+        item_controller = ItemController.new
+
+        item_controller.modify_barcode_mapping(barcode, new_product_name)
+        assert_equal(new_product_name, barcode_cache[barcode])
+      end
+
+
       def test_add_item_with_barcode
         barcode = "4251097410289"
         storage_id = "1"
