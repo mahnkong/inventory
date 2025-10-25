@@ -479,8 +479,13 @@
                 }
             })
             if (!response.ok) {
-                loadFromCache = true;
-                showToast(`API Fehler (status: ${response.status}) - nutze Cache`);
+                if (response.status !== 401) {
+                    showToast(`API Fehler (status: ${response.status}) - nutze Cache`);
+                    loadFromCache = true;
+                } else {
+                    showToast("Invalid token!");
+                    return null;
+                }
             } else {
                 let data = await response.json();
                 await saveToIndexedDB(cacheKey, data);
