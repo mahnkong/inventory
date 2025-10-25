@@ -79,7 +79,7 @@ module Inventory
         mock_storage.expects(:store_data).returns(true)
 
         mock_barcode_cache = create_barcode_cache_mock
-        mock_barcode_cache.expects(:load_data).returns(barcode_cache)
+        mock_barcode_cache.expects(:load_data).returns(barcode_cache).twice
         mock_barcode_cache.expects(:store_data).returns(true)
 
         Openfoodfacts::Product.expects(:get).with(barcode).returns(product)
