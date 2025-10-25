@@ -376,6 +376,7 @@
         } else {
             closeSearch()
         }
+        renderPageBasedOnState();
     });
 
     function openSearch() {
@@ -383,14 +384,12 @@
         searchContainer.style.display = 'block';
         searchBtn.textContent = '✖️';
         searchInput.focus();
-        filter("");
     }
     function closeSearch() {
         current_accordion = null;
         searchContainer.style.display = 'none';
         searchBtn.textContent = '🔎';
         searchInput.value = "";
-        filter();
     }
 
     closeBtn.addEventListener("click", () => {
@@ -400,7 +399,7 @@
         })
     });
     saveProductNameBtn.addEventListener("click", () => {
-        modifyBarcodeMapping().then(closeSearch);
+        modifyBarcodeMapping().then(loadItems);
         productNameModal.classList.remove("active");
     });
 
@@ -527,9 +526,9 @@
 
     async function loadItems() {
         overlay.classList.add("active");
-        let items = await loadUrl('items', '/backend/items');
+        await loadUrl('items', '/backend/items');
         overlay.classList.remove("active");
-        renderList(items);
+        await renderPageBasedOnState();
     }
 
     async function removeItem(storage_id, barcode) {
@@ -792,6 +791,15 @@
         }
     }
 
+    async function renderPageBasedOnState() {
+        const query = searchInput.value;
+        if (! query || query === '') {
+            await filter()
+        } else {
+            await filter(query);
+        }
+    }
+
     async function filter(query = null) {
         const data = await loadFromIndexedDB('cache_items');
         let toggleAll = false;
@@ -826,7 +834,7 @@
         }
 
         debounceTimer = setTimeout(async () => {
-            await filter(query);
+            await renderPageBasedOnState()
         }, 200);
     });
 
