@@ -4,7 +4,7 @@ A lightweight, mobile-friendly inventory tracking application. This project cons
 
 The application uses the openfoodfacts API to fetch product data
 
-Created as a fun project while moving into a new house with a log of storage space including several freezers.
+Created as a fun / PoC project while moving into a new house with a log of storage space including several freezers.
 
 ## Project Structure
 
@@ -50,7 +50,7 @@ The application will be accessible through the HAProxy load balancer (check `doc
 1. Create a `.env` file in the root directory.
 2. Define necessary environment variables (e.g., `AUTH_TOKEN` for API security).
 
-## 📱 Frontend Features
+## Frontend Features
 
 - **Barcode Scanning:** Uses the browser's native `BarcodeDetector` API to scan items via the device camera.
 - **Offline Support:** Implemented as a PWA with a Service Worker for caching.
