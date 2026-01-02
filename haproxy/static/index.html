@@ -108,7 +108,7 @@
             flex: 1; /* füllt den Platz auf der linken Seite */
         }
 
-        .item-action {
+        .item-delete-action {
             padding: 1rem;
             font-weight: bold;
             text-align: left;
@@ -122,7 +122,25 @@
             align-items: center;
         }
 
-        .item-action:hover {
+        .item-delete-action:hover {
+            background: #cfd7de;
+        }
+
+        .item-add-action {
+            padding: 1rem;
+            font-weight: bold;
+            text-align: left;
+            background: #dfe4ea;
+            border: 1px solid #dfd1d4;
+            user-select: none; /* moderne Browser */
+            -webkit-user-select: none; /* Safari / iOS */
+            -ms-user-select: none; /* alter Edge */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .item-add-action:hover {
             background: #dfd1d4;
         }
 
@@ -742,21 +760,36 @@
                     itemText.addEventListener("pointerup", () => clearTimeout(productNameTimer));
                     itemText.addEventListener("pointercancel", () => clearTimeout(productNameTimer));
 
-                    const itemAction = document.createElement('div');
-                    itemAction.className = 'item-action';
-                    itemAction.textContent = '➖';
-
                     let actionTimer;
-                    itemAction.addEventListener("pointerdown", e => {
+
+                    const itemAddAction = document.createElement('div');
+                    itemAddAction.className = 'item-add-action';
+                    itemAddAction.textContent = '➕';
+
+                    itemAddAction.addEventListener("pointerdown", e => {
+                        actionTimer = setTimeout(() => {
+                            addItem(storage_id, barcode);
+                        }, 600);
+                    });
+                    itemAddAction.addEventListener("pointerup", () => clearTimeout(actionTimer));
+                    itemAddAction.addEventListener("pointercancel", () => clearTimeout(actionTimer));
+
+
+                    const itemDeleteAction = document.createElement('div');
+                    itemDeleteAction.className = 'item-delete-action';
+                    itemDeleteAction.textContent = '➖';
+
+                    itemDeleteAction.addEventListener("pointerdown", e => {
                         actionTimer = setTimeout(() => {
                             removeItem(storage_id, barcode);
                         }, 600);
                     });
-                    itemAction.addEventListener("pointerup", () => clearTimeout(actionTimer));
-                    itemAction.addEventListener("pointercancel", () => clearTimeout(actionTimer));
+                    itemDeleteAction.addEventListener("pointerup", () => clearTimeout(actionTimer));
+                    itemDeleteAction.addEventListener("pointercancel", () => clearTimeout(actionTimer));
 
                     item.appendChild(itemText);
-                    item.appendChild(itemAction);
+                    item.appendChild(itemAddAction);
+                    item.appendChild(itemDeleteAction);
 
                     body.appendChild(item);
                 });
